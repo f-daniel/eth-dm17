@@ -20,9 +20,9 @@ def mapper(key, value):
     # kevins fault
     hf_vec = map(lambda x:gen_hashfunc(nrows), range(nrows))
 
-    for i in range(len(shingles)):
-    	if shingles[i] != 0:
-    		for j in range(nrows):
+    for j in range(nrows):
+    	for i in range(len(shingles)):
+    		if shingles[i] != 0:
     			sigvec[j] = np.minimum(hf_vec[j](shingles[i]), sigvec[j])
 
 
