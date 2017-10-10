@@ -18,14 +18,15 @@ def mapper(key, value):
     sigvec = np.ones(nrows)*sys.maxint
 
     # kevins fault
-    hf_vec = map(gen_hashfunc(nrows), range(nrows))
+    hf_vec = map(lambda x:gen_hashfunc(nrows), range(nrows))
 
     for i in range(len(shingles)):
     	if shingles[i] != 0:
     		for j in range(nrows):
-    			sigvec[i] = np.minimum(hf_vec[j](shingles[i]), sigvec[i])
+    			sigvec[j] = np.minimum(hf_vec[j](shingles[i]), sigvec[j])
 
-    #print(sigvec)
+
+    print(sigvec)
 
     if False:
         yield "key", "value"  # this is how you yield a key, value pair
