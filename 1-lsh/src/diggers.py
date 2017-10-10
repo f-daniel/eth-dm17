@@ -1,11 +1,12 @@
 import numpy as np
+import sys
 
 def mapper(key, value):
     # key: None
     # value: one line of input file
 
     # initialize int-document array and id
-    # r - number of hash functions
+    # r - number of rows per band
     # b - number of bands
     shingles = value.split(' ')
     id = int (shingles[0].split('_')[1])
@@ -14,12 +15,17 @@ def mapper(key, value):
     b = 20
     nrows = r*b
     np.random.seed(seed=1337)
-    sigvec = np.empty(nrows)
+    sigvec = np.ones(nrows)*sys.maxint
+
+    # kevins fault
+    hf_vec = map(gen_hashfunc(nrows), range(nrows))
 
     for i in range(len(shingles)):
-    	sigvec[i] = gen_hashfunc(nrows)(shingles[i])
+    	if shingles[i] != 0:
+    		for j in range(nrows):
+    			sigvec[i] = np.minimum(hf_vec[j](shingles[i]), sigvec[i])
 
-    print(sigvec)
+    #print(sigvec)
 
     if False:
         yield "key", "value"  # this is how you yield a key, value pair
