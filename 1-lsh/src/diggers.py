@@ -20,6 +20,10 @@ def create_signature(hash_functions, shingles):
     for j in range(len(hash_functions)):
         for i in range(len(shingles)):
             signature[j] = np.minimum(hash_functions[j](shingles[i]), signature[j])
+        # Kkleindev: This alternate solution seems not to provide any remarkable speedup.
+        #hashes = np.ones(len(shingles))
+        #vector_hash = np.vectorize(hash_functions[j])
+        #signature[j] = np.amin(vector_hash(shingles))
     return signature
 
 def similarity(shingles_1, shingles_2):
@@ -35,30 +39,25 @@ def mapper(key, value):
     shingles = map(int, shingles[1:])
     n_rows = N_BANDS * N_ROWS_PER_BAND
     np.random.seed(seed=SEED)
-
     hash_functions = [gen_hash_function(n_rows) for i in range(n_rows)]
 
     signature = create_signature(hash_functions, shingles)
 
-    band_hash_functions = [gen_hash_function(N_BUCKETS)
-            for i in range(N_ROWS_PER_BAND)]
+    band_hash_functions = [gen_hash_function(N_BUCKETS) for i in range(N_ROWS_PER_BAND)]
 
-    result = np.empty(N_BANDS)
     for i in range(N_BANDS):
-        band = signature[i * N_ROWS_PER_BAND:(i+1) * N_ROWS_PER_BAND]
+        band = signature[i * N_ROWS_PER_BAND : (i + 1) * N_ROWS_PER_BAND]
         sum_hashes = 0
         for j in range(N_ROWS_PER_BAND):
             sum_hashes += band_hash_functions[j](band[j])
-        #result[i] = sum_hashes % N_BUCKETS
         key = str(i) + '-' + str(sum_hashes % N_BUCKETS)
         yield key, [document_id, shingles]
-    #for bucket in result:
-    #    yield bucket, value
 
 def reducer(key, values):
     # key: key from mapper used to aggregate
     # values: list of all value for that key
-    print values
+    if len(values) < 2:
+        return
     for i in range(len(values)):
         [document_id_1, shingles_1] = values[i]
         for j in range(i + 1, len(values)):
