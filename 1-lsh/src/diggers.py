@@ -5,10 +5,13 @@ import numpy as np
 N_BANDS = 20
 # The number of rows per band.
 N_ROWS_PER_BAND = 50
+# Number of buckets for band hashing.
+N_BUCKETS = 8193
 # A large prime larger than the number of rows in the signature matrix, used for hashing.
 PRIME = 3373
 # Seed used for randomization in every instance of mapper.
 SEED = 1337
+
 
 def create_signature(hash_functions, shingles):
     signature = np.ones(len(hash_functions)) * sys.maxint
@@ -31,14 +34,23 @@ def mapper(key, value):
     hash_functions = [gen_hash_function(n_rows) for i in range(n_rows)]
 
     signature = create_signature(hash_functions, shingles)
-    print signature
 
-    if False:
-        yield "key", "value"  # this is how you yield a key, value pair
+    band_hash_functions = [gen_hash_function(N_BUCKETS)
+            for i in range(N_ROWS_PER_BAND)]
+
+    result = np.empty(N_BANDS)
+    for i in range(N_BANDS):
+        band = signature[i * N_ROWS_PER_BAND:(i+1) * N_ROWS_PER_BAND]
+        sum_hashes = 0
+        for j in range(N_ROWS_PER_BAND):
+            sum_hashes += band_hash_functions[j](band[j])
+        result[i] = sum_hashes % N_BUCKETS
+    yield [(bucket, document_id) for bucket in result]  # this is how you yield a key, value pair
 
 def reducer(key, values):
     # key: key from mapper used to aggregate
     # values: list of all value for that key
+
     if False:
         yield "key", "value"  # this is how you yield a key, value pair
 
