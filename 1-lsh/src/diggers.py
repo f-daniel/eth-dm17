@@ -27,7 +27,11 @@ def mapper(key, value):
     n_rows = N_BANDS * N_ROWS_PER_BAND
     np.random.seed(seed=SEED)
 
-    hash_functions = map(lambda x: gen_hashfunc(n_rows), range(n_rows))
+    #hash_functions = map(lambda x: gen_hashfunc(n_rows), range(n_rows))
+    hash_functions = [gen_hash_function(n_rows) for i in range(n_rows)]
+
+    signature = create_signature(hash_functions, shingles)
+    print signature
 
     if False:
         yield "key", "value"  # this is how you yield a key, value pair
@@ -38,7 +42,7 @@ def reducer(key, values):
     if False:
         yield "key", "value"  # this is how you yield a key, value pair
 
-def gen_hashfunc(n_rows):
+def gen_hash_function(n_rows):
     a = np.random.randint(1, n_rows)
     b = np.random.randint(0, n_rows)
     return lambda s: ((np.multiply(a, s) + b) % PRIME) % n_rows
