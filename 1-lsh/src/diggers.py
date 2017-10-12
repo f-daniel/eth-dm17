@@ -53,7 +53,9 @@ def mapper(key, value):
             sum_hashes += band_hash_functions[j](band[j])
         result[i] = sum_hashes % N_BUCKETS
     #yield [(bucket, (document_id, shingles)) for bucket in result]  # this is how you yield a key, value pair
-    yield [(bucket, value) for bucket in result]
+    for bucket in result:
+        yield bucket, value
+    #yield [(bucket, value) for bucket in result]
 
 def reducer(key, values):
     # key: key from mapper used to aggregate
@@ -70,11 +72,7 @@ def reducer(key, values):
             document_id_2 = int(shingles_2[0].split('_')[1])
             shingles_2 = map(int, shingles_2[1:])
             if similarity(shingles_1, shingles_2) >= SIMILARITY:
-                duplicates.append(
-                        (max(document_id_1, document_id_2), min(document_id_1, document_id_2)))
-    print duplicates
-    if len(duplicates) != 0:
-        yield duplicates # this is how you yield a key, value pair
+                yield max(document_id_1, document_id_2), min(document_id_1, document_id_2)
 
 def gen_hash_function(n_rows):
     a = np.random.randint(1, n_rows)
