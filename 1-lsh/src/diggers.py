@@ -11,6 +11,8 @@ N_BUCKETS = 8193
 PRIME = 3373
 # Seed used for randomization in every instance of mapper.
 SEED = 1337
+#
+SIMILARITY = .85
 
 
 def create_signature(hash_functions, shingles):
@@ -19,6 +21,11 @@ def create_signature(hash_functions, shingles):
         for i in range(len(shingles)):
             signature[j] = np.minimum(hash_functions[j](shingles[i]), signature[j])
     return signature
+
+def similarity(shingles_1, shingles_2):
+    set_a = set(shingles_1)
+    set_b = set(shingles_2)
+    return len(set_a.intersection(set_b)) / len(set_a.union(set_b))
 
 def mapper(key, value):
     # key: None
@@ -45,14 +52,29 @@ def mapper(key, value):
         for j in range(N_ROWS_PER_BAND):
             sum_hashes += band_hash_functions[j](band[j])
         result[i] = sum_hashes % N_BUCKETS
-    yield [(bucket, document_id) for bucket in result]  # this is how you yield a key, value pair
+    #yield [(bucket, (document_id, shingles)) for bucket in result]  # this is how you yield a key, value pair
+    yield [(bucket, value) for bucket in result]
 
 def reducer(key, values):
     # key: key from mapper used to aggregate
     # values: list of all value for that key
-
-    if False:
-        yield "key", "value"  # this is how you yield a key, value pair
+    duplicates = []
+    for i in range(len(values)):
+        #(document_id_1, shingles_1) = values[i]
+        shingles_1 = values[i].split(' ')
+        document_id_1 = int(shingles_1[0].split('_')[1])
+        shingles_1 = map(int, shingles_1[1:])
+        for j in range(i + 1, len(values)):
+            #(document_id_2, shingles_2) = values[j]
+            shingles_2 = values[j].split(' ')
+            document_id_2 = int(shingles_2[0].split('_')[1])
+            shingles_2 = map(int, shingles_2[1:])
+            if similarity(shingles_1, shingles_2) >= SIMILARITY:
+                duplicates.append(
+                        (max(document_id_1, document_id_2), min(document_id_1, document_id_2)))
+    print duplicates
+    if len(duplicates) != 0:
+        yield duplicates # this is how you yield a key, value pair
 
 def gen_hash_function(n_rows):
     a = np.random.randint(1, n_rows)
