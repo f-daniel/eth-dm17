@@ -17,47 +17,59 @@ SEED = 1337
 SIMILARITY = .85
 
 
-def create_signature(hash_functions, shingles):
-    signature = np.ones(len(hash_functions)) * sys.maxint
-    for j in range(len(hash_functions)):
-        for i in range(len(shingles)):
-            signature[j] = np.minimum(hash_functions[j](shingles[i]), signature[j])
-        # Kkleindev: This alternate solution seems not to provide any remarkable speedup.
-        #hashes = np.ones(len(shingles))
-        #vector_hash = np.vectorize(hash_functions[j])
-        #signature[j] = np.amin(vector_hash(shingles))
+def create_signature(hash_params, shingles):
+    """Creates the signature of a document by applying min hashing based on the
+    hash_params to the shingles column. A hash function is of the form:
+    h(s) = ((a * s  + b ) mod PRIME) mod n_rows."""
+    n_rows = len(hash_params[0])
+    signature = np.ones(n_rows) * sys.maxint
+    param_as, param_bs = hash_params
+    shingles = np.resize(shingles, (1, len(shingles)))
+    param_as = np.resize(param_as, (n_rows, 1))
+    param_bs = np.resize(param_bs, (n_rows, 1))
+    # This matrix is neither the shingles nor the signature matrix. It is a matrix, with rows
+    # representing hash functions and columns representing single shingles of the same
+    # document.
+    matrix = np.multiply(param_as, shingles)
+    matrix = np.add(matrix, param_bs)
+    matrix = np.mod(matrix, PRIME)
+    matrix = np.mod(matrix, n_rows)
+    signature = np.amin(matrix, 1)
     return signature
 
 def similarity(shingles_1, shingles_2):
+    """Computes the Jaccard similarity of two lists of shingles."""
     set_a = set(shingles_1)
     set_b = set(shingles_2)
-    return len(set_a.intersection(set_b)) / len(set_a.union(set_b))
+    intersection_length = len(set_a.intersection(set_b))
+    return intersection_length / (len(set_a) + len(set_b) - intersection_length)
 
 def mapper(key, value):
-    # key: None
-    # value: one line of input file
+    """The mapper's key is None. Its value is an input line. Its output keys are string
+    concatenations of band id and bucket its. Its output values are document id and
+    shingles that have been mapped into the named into the referred bucket for the
+    referred band."""
     shingles = value.split(' ')
     document_id = int(shingles[0].split('_')[1])
-    shingles = map(int, shingles[1:])
+    shingles = np.array(map(int, shingles[1:]))
     n_rows = N_BANDS * N_ROWS_PER_BAND
     np.random.seed(seed=SEED)
-    hash_functions = [gen_hash_function(n_rows) for i in range(n_rows)]
 
-    signature = create_signature(hash_functions, shingles)
+    hash_params = gen_hash_params(n_rows, n_rows)
+    signature = create_signature(hash_params, shingles)
 
-    band_hash_functions = [gen_hash_function(N_BUCKETS) for i in range(N_ROWS_PER_BAND)]
-
+    param_as, param_bs = gen_hash_params(N_BUCKETS, N_ROWS_PER_BAND)
     for i in range(N_BANDS):
-        band = signature[i * N_ROWS_PER_BAND : (i + 1) * N_ROWS_PER_BAND]
-        sum_hashes = 0
-        for j in range(N_ROWS_PER_BAND):
-            sum_hashes += band_hash_functions[j](band[j])
-        key = str(i) + '-' + str(sum_hashes % N_BUCKETS)
+        band = np.copy(signature[i * N_ROWS_PER_BAND : (i + 1) * N_ROWS_PER_BAND])
+        band = np.mod(np.mod(np.multiply(band, param_as) + param_bs, PRIME),
+                      N_BUCKETS)
+        # Arbitraty format combining both band id as well as the hashed-into bucket.
+        key = str(i) + '-' + str(np.sum(band) % N_BUCKETS)
         yield key, [document_id, shingles]
 
 def reducer(key, values):
-    # key: key from mapper used to aggregate
-    # values: list of all value for that key
+    """See mapper function for reducer input. The reducer's output are similar document
+    pairs."""
     if len(values) < 2:
         return
     for i in range(len(values)):
@@ -67,30 +79,9 @@ def reducer(key, values):
             if similarity(shingles_1, shingles_2) >= SIMILARITY:
                 yield min(document_id_1, document_id_2), max(document_id_1, document_id_2)
 
-def gen_hash_function(n_rows):
-    a = np.random.randint(1, n_rows)
-    b = np.random.randint(0, n_rows)
-    return lambda s: ((np.multiply(a, s) + b) % PRIME) % n_rows
-
-# Simple test case for min hashing. Inspired by lecture slide 18 from week 3.
-def test_min_hash():
-    shingles_1 = [0, 1, 5, 6]
-    shingles_2 = [2, 3, 4]
-    shingles_3 = [0, 5, 6]
-    shingles_4 = [1, 2, 3,4 ]
-    permutation_1 = [2, 3, 6, 5, 0, 1, 4]
-    permutation_2 = [3, 1, 0, 2, 5, 6, 4]
-    permutation_3 = [0, 2, 6, 5, 1, 4, 3]
-    # Create mock hash functions permuting the shingles.
-    hash_functions = []
-    hash_functions.append(lambda s: permutation_1[s % 7])
-    hash_functions.append(lambda s: permutation_2[s % 7])
-    hash_functions.append(lambda s: permutation_3[s % 7])
-    signature_1 = create_signature(hash_functions, shingles_1)
-    signature_2 = create_signature(hash_functions, shingles_2)
-    signature_3 = create_signature(hash_functions, shingles_3)
-    signature_4 = create_signature(hash_functions, shingles_4)
-    print signature_1
-    print signature_2
-    print signature_3
-    print signature_4
+def gen_hash_params(n_buckets, n_hash_functions):
+    """Returns a list n_hash_functions many a parameters and a list of b parameters. These
+    parameters are used for hashing. The as and bs are a function of n_buckets."""
+    param_as = np.random.randint(1, n_buckets, n_hash_functions)
+    param_bs = np.random.randint(0, n_buckets, n_hash_functions)
+    return (param_as, param_bs)
