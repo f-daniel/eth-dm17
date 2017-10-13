@@ -1,5 +1,7 @@
+from __future__ import division
 import sys
 import numpy as np
+
 
 # The number of bands in signature matrix.
 N_BANDS = 20
@@ -25,6 +27,7 @@ def create_signature(hash_functions, shingles):
 def similarity(shingles_1, shingles_2):
     set_a = set(shingles_1)
     set_b = set(shingles_2)
+    # print "intersection: " + str(len(set_a.intersection(set_b))) + " / union: " + str(len(set_a.union(set_b))) + " = " + str(len(set_a.intersection(set_b)) / len(set_a.union(set_b)))
     return len(set_a.intersection(set_b)) / len(set_a.union(set_b))
 
 def mapper(key, value):
@@ -71,8 +74,10 @@ def reducer(key, values):
             shingles_2 = values[j].split(' ')
             document_id_2 = int(shingles_2[0].split('_')[1])
             shingles_2 = map(int, shingles_2[1:])
+            #print "similarity: " + str(similarity(shingles_1, shingles_2)) + "ids: " + str(document_id_1) + " and " + str(document_id_2)
             if similarity(shingles_1, shingles_2) >= SIMILARITY:
-                yield max(document_id_1, document_id_2), min(document_id_1, document_id_2)
+                # print "Doc id 1: " + str(min(document_id_1, document_id_2)) + "doc id 2: " + str(max(document_id_1, document_id_2))
+                yield min(document_id_1, document_id_2), max(document_id_1, document_id_2)
 
 def gen_hash_function(n_rows):
     a = np.random.randint(1, n_rows)
