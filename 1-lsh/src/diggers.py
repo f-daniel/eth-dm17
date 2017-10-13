@@ -4,9 +4,9 @@ import numpy as np
 
 
 # The number of bands in signature matrix.
-N_BANDS = 20
+N_BANDS = 100
 # The number of rows per band.
-N_ROWS_PER_BAND = 50
+N_ROWS_PER_BAND = 10
 # Number of buckets for band hashing.
 N_BUCKETS = 8193
 # A large prime larger than the number of rows in the signature matrix, used for hashing.
