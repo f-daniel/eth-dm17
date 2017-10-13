@@ -31,7 +31,6 @@ def create_signature(hash_functions, shingles):
 def similarity(shingles_1, shingles_2):
     set_a = set(shingles_1)
     set_b = set(shingles_2)
-    # print "intersection: " + str(len(set_a.intersection(set_b))) + " / union: " + str(len(set_a.union(set_b))) + " = " + str(len(set_a.intersection(set_b)) / len(set_a.union(set_b)))
     return len(set_a.intersection(set_b)) / len(set_a.union(set_b))
 
 def mapper(key, value):
@@ -64,15 +63,8 @@ def reducer(key, values):
     for i in range(len(values)):
         [document_id_1, shingles_1] = values[i]
         for j in range(i + 1, len(values)):
-            #(document_id_2, shingles_2) = values[j]
-            shingles_2 = values[j].split(' ')
-            document_id_2 = int(shingles_2[0].split('_')[1])
-            shingles_2 = map(int, shingles_2[1:])
-            #print "similarity: " + str(similarity(shingles_1, shingles_2)) + "ids: " + str(document_id_1) + " and " + str(document_id_2)
-            # [document_id_2, shingles_2] = values[j]
-
+            [document_id_2, shingles_2] = values[j]
             if similarity(shingles_1, shingles_2) >= SIMILARITY:
-                # print "Doc id 1: " + str(min(document_id_1, document_id_2)) + "doc id 2: " + str(max(document_id_1, document_id_2))
                 yield min(document_id_1, document_id_2), max(document_id_1, document_id_2)
 
 def gen_hash_function(n_rows):
@@ -102,9 +94,3 @@ def test_min_hash():
     print signature_2
     print signature_3
     print signature_4
-
-def min_hash():
-    return 0
-
-def band_hash():
-    return 0
