@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 
 N_DIM = 400
+N_DATA = 2000
 
 def transform(X):
     # Make sure this function works for both 1D and 2D NumPy arrays.
@@ -13,25 +14,24 @@ def mapper(key, value):
     # value: one line of input file
     first_moment_decay  = 0.9
     second_moment_decay = 0.999
-    bias_previous = np.array([0])
-    bias = np.array([0.1])
     first_moment = np.zeros(N_DIM)
     second_moment = np.zeros(N_DIM)
     learning_rate = 0.001
     weight = np.random.rand(N_DIM)
     # Normalize weight's norm to be smaller or equal 1.
     weight = weight / np.linalg.norm(weight)
-    convergence_threshold = 0.00001
+    convergence_threshold = 0.000001
     relative_change = 1
     t = 0
     epsilon = 1e-8
+    n_iterations = 40000
     np.random.shuffle(value)
     # Convert sample strings to lists of floats.
     value = map(lambda sample: map(float, sample.split(" ")), value)
     # Adam.
-    while relative_change >= convergence_threshold and t < 2000:
-        y = np.array(value[t][0])
-        x = np.array(value[t][1:])
+    while relative_change >= convergence_threshold and t < n_iterations:
+        y = np.array(value[t % N_DATA][0])
+        x = np.array(value[t % N_DATA][1:])
         t = t + 1
         # Analytic derivation via case distinction.
         if y * np.dot(weight, x) > 1:
