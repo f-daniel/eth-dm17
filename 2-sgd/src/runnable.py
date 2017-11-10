@@ -24,7 +24,7 @@ def mapper(key, value):
     relative_change = 1
     t = 0
     epsilon = 1e-8
-    n_iterations = 40000
+    n_iterations = 100000
     np.random.shuffle(value)
     # Convert sample strings to lists of floats.
     value = map(lambda sample: map(float, sample.split(" ")), value)
