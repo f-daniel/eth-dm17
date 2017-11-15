@@ -2,21 +2,23 @@ from __future__ import division
 import numpy as np
 import random
 
-N_DIM = 128 + 128 * 128
+N_FEATURES = 250
+N_DIM = N_FEATURES + N_FEATURES * N_FEATURES
 N_DATA = 2000
 
 def random_quadratic_transform(x):
-    random.seed(7)
+    random.seed(71)
     # Choose 128 random feature indexes.
-    feature_indexes = map(lambda x: random.randint(0, 399), range(128))
+    feature_indexes = map(lambda x: random.randint(0, 399), range(N_FEATURES))
     features = np.take(x, feature_indexes)
-    for i in range(128):
-        features = np.concatenate((features, features[i] * features[0:128]), axis = 0)
+    # features = x
+    for i in range(N_FEATURES):
+        features = np.concatenate((features, features[i] * features[0:N_FEATURES]), axis = 0)
     return features
 
 def transform(x):
     # 2D transformation.
-    if X.ndim > 1:
+    if x.ndim > 1:
         x_t = np.apply_along_axis(random_quadratic_transform, 1, x)
     # 1D transformation.
     else:
@@ -38,7 +40,7 @@ def mapper(key, value):
     relative_change = 1
     t = 0
     epsilon = 1e-8
-    n_iterations = 10000
+    n_iterations = 4000
     np.random.shuffle(value)
     # Convert sample strings to lists of floats.
     value = map(lambda sample: map(float, sample.split(" ")), value)
