@@ -1,13 +1,27 @@
 from __future__ import division
 import numpy as np
+import random
 
-N_DIM = 400
+N_DIM = 128 + 128 * 128
 N_DATA = 2000
 
-def transform(X):
-    # Make sure this function works for both 1D and 2D NumPy arrays.
-    return X
+def random_quadratic_transform(x):
+    random.seed(7)
+    # Choose 128 random feature indexes.
+    feature_indexes = map(lambda x: random.randint(0, 399), range(128))
+    features = np.take(x, feature_indexes)
+    for i in range(128):
+        features = np.concatenate((features, features[i] * features[0:128]), axis = 0)
+    return features
 
+def transform(x):
+    # 2D transformation.
+    if X.ndim > 1:
+        x_t = np.apply_along_axis(random_quadratic_transform, 1, x)
+    # 1D transformation.
+    else:
+        x_t = random_quadratic_transform(x)
+    return x_t
 
 def mapper(key, value):
     # key: None
@@ -32,6 +46,7 @@ def mapper(key, value):
     while relative_change >= convergence_threshold and t < n_iterations:
         y = np.array(value[t % N_DATA][0])
         x = np.array(value[t % N_DATA][1:])
+        x = transform(x)
         t = t + 1
         # Analytic derivation via case distinction.
         if y * np.dot(weight, x) > 1:
