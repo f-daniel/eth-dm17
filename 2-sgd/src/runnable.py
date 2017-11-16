@@ -4,10 +4,14 @@ import numpy as np
 N_DIM = 400
 N_DATA = 2000
 
-def transform(X):
-    # Make sure this function works for both 1D and 2D NumPy arrays.
-    return X
+def transform(x):
+    x_transformed =  normalize(x)
+    return x_transformed
 
+def normalize(x):
+    x_mean = np.mean(x, axis=0)
+    x_std = np.std(x, axis=0)
+    return (x - x_mean) / x_std
 
 def mapper(key, value):
     # key: None
@@ -28,10 +32,12 @@ def mapper(key, value):
     np.random.shuffle(value)
     # Convert sample strings to lists of floats.
     value = map(lambda sample: map(float, sample.split(" ")), value)
+    ys = np.array([value[i][0] for i in range(N_DATA)])
+    xs = transform(np.array([value[i][1:] for i in range(N_DATA)]))
     # Adam.
-    while relative_change >= convergence_threshold and t < n_iterations:
-        y = np.array(value[t % N_DATA][0])
-        x = np.array(value[t % N_DATA][1:])
+    while t < n_iterations:
+        y = ys[t % N_DATA]
+        x = xs[t % N_DATA]
         t = t + 1
         # Analytic derivation via case distinction.
         if y * np.dot(weight, x) > 1:
