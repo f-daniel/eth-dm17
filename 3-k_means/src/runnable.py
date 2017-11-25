@@ -1,52 +1,39 @@
 import numpy as np
+import sys
 
-def mapper(key, value):
-    # key: None
-    # value: one line of input file
-    
-    # TBD: checkout k-means++ for center updates
+N_CENTERS = 200
+# The number of times the k-means algorithms passes over the whole dataset at hand.
+N_PASSES = 4
 
-    np.random.shuffle(value)
-    centers = value[:200,:]
-    np.random.shuffle(value)
-    update_count = np.zeros(200)
-
-    # k-means algorithm
-    for i in value:
-        min_distance = 10e7
-        for j_index, j in enumerate(centers):
-            distance = np.linalg.norm(i-j)
+def k_means(data, n_iterations):
+    # Center initialization: 200 random points from dataset.
+    np.random.shuffle(data)
+    centers = data[:N_CENTERS,:]
+    np.random.shuffle(data)
+    # n_updates keeps track of how frequently each center has been updated.
+    n_updates = np.zeros(N_CENTERS)
+    # Online k-means algorithm - stochastic gradient descent.
+    for iteration in range(n_iterations):
+        x = data[iteration % data.shape[0]]
+        min_distance = sys.maxint
+        # For a given datapoint, find the center that is closest to it.
+        for center_index in range(N_CENTERS):
+            distance = np.linalg.norm(x - centers[center_index])
             if distance < min_distance:
                 min_distance = distance
-                center_index = j_index
-                update_count[j_index] += 1
+                closest_center_index = center_index
+        n_updates[closest_center_index] += 1
+        # Use a learning rate of 1 / #updates(center).
+        centers[closest_center_index] +=  ((x - centers[closest_center_index])
+                * 2 / n_updates[closest_center_index])
+    return centers
 
-        centers[center_index] += (2 * (i - centers[center_index]))/update_count[center_index]
-
-    yield "key", centers  # this is how you yield a key, value pair
-
+def mapper(key, value):
+    # TODO(f-daniel): checkout k-means++ for center updates
+    yield "key", k_means(value, N_PASSES * value.shape[0])
 
 def reducer(key, values):
     # key: key from mapper used to aggregate
     # values: list of all value for that key
-    np.random.shuffle(values)
-    centers = values[:200,:]
-    np.random.shuffle(values)
-    update_count = np.zeros(200)
-
-    # k-means algorithm
-    for i in values:
-        min_distance = 10e7
-        for j_index, j in enumerate(centers):
-            distance = np.linalg.norm(i-j)
-            if distance < min_distance:
-                min_distance = distance
-                center_index = j_index
-                update_count[j_index] += 1
-
-        centers[center_index] += (2 * (i - centers[center_index]))/update_count[center_index]
-
-
-
     # Note that we do *not* output a (key, values) pair here.
-    yield centers
+    yield k_means(values, N_PASSES * values.shape[0])
