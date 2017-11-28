@@ -89,7 +89,7 @@ def assign_labels_array(data, data_squared_norms, distances, centers):
         center_squared_norms[center_index] = np.dot(centers[center_index, :], centers[center_index, :])
 
     for data_index in range(n_points):
-        print("data_index: ", data_index)
+        # print("data_index: ", data_index)
         min_distance = -1
         for center_index in range(N_CENTERS):
             dist = 0.0
@@ -113,8 +113,6 @@ def get_centers(data, closest_centers, distances):
     n_points = data.shape[0]
     n_centers = N_CENTERS
     centers = np.zeros((n_centers, N_DIM))
-    print(closest_centers[:100])
-    print("closest_centers shape: ", closest_centers.shape)
     n_points_per_center = np.bincount(closest_centers, minlength = n_centers)
     empty_clusters = np.where(n_points_per_center == 0)[0]
 
@@ -144,7 +142,7 @@ def compute_centers_and_inertia(data, data_squared_norms, centers):
 def k_means_sk(data):
 
     eps = 1e-4
-    n_iter = 3 # 300
+    n_iter = 8 # 300
     n_points = data.shape[0]
 
     best_labels, best_inertia, best_centers = None, None, None
@@ -163,20 +161,17 @@ def k_means_sk(data):
     n_restarts = 3
     closest_centers = None
     for run in range(n_restarts):
+        print("Restart number ", run)
         # TODO: initialize centers using k-means++
         centers = np.random.permutation(data)[:N_CENTERS]
         for i in range(n_iter):
+            print("Iteration number ", i)
             centers_old = centers.copy()
-            print("centers.shape: ", centers.shape)
             # labels, intertia (E)
-            # cluster_centers = -np.ones(N_CENTERS, np.int32)
-            # distances = np.zeros(shape=(data.shape[0], 1), dtype=data.dtype)
-            # inertia, cluster_centers, distances = assign_labels_array(data, data_squared_norms, distances, centers)
             inertia, cluster_centers, distances = compute_centers_and_inertia(data, data_squared_norms, centers)
             
             # means (M)
             centers = get_centers(data, cluster_centers, distances)
-            print("centers.shape after get_centers: ", centers.shape)
             # check if new centers intertia etc. are better and if so, reassign
             if best_inertia is None or inertia < best_inertia:
                 best_labels = cluster_centers.copy()
