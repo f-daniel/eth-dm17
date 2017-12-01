@@ -4,6 +4,7 @@ import numpy as np
 from numpy.random import randint, choice, shuffle
 from numpy.linalg import norm
 import sys
+import coresets
 
 N_CLUSTERS = 200
 N_ITERATIONS = 10
@@ -36,13 +37,14 @@ def reducer(key, values):
     # Use a pseudo coreset begin a uniformly sampled subset of the data with
     # equal weights (1).
     np.random.shuffle(values)
-    coreset = [(values[i], 1) for i in range(N_SAMPLES)]
+    # coreset_var = [(values[i], 1) for i in range(N_SAMPLES)]
+    coreset_var = coresets.get_coreset(values, N_CLUSTERS, coreset_size = 10000, delta=0.1)
     for iteration in range(N_ITERATIONS):
         # The sum of points that are closest to a given cluster center.
         cluster_sum = np.zeros((N_CLUSTERS, d))
         # The number of points that are closest to a given cluster center.
         cluster_count = np.zeros(N_CLUSTERS)
-        for point, w in coreset:
+        for point, w in coreset_var:
             closest_cluster_index = norm(centers - point, axis = 1).argmin(axis
                     = 0)
             cluster_sum[closest_cluster_index] += w * point
