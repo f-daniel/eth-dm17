@@ -1,22 +1,23 @@
 import numpy as np
 
+# fdaniel: straightforward implementation of LinUCB
+# fdaniel: naming mainly according to lecture 12 slide 31
+# fdaniel: full description in [Li et al, 2010], see algorithm 1
+M = {}
+M_inverse = {}
 
-A = {}
 b = {}
-d = 6
+DIM = 6
 
-#LinUCB parameter initialization
-DELTA = 0.05
-ALPHA = 1 + np.sqrt(0.5 *(np.log(2) - np.log(DELTA)))
-R0 = -1
-R1 = 20
-print "ALPHA = {}, R0 = {}, R1 = {}".format(ALPHA, R0, R1)
-
-# save interim calculations
-A_inverse = {}
 THETA = {}
+DELTA = 0.05
+ALPHA = 1 + np.sqrt(0.5 * (np.log(2) - np.log(DELTA)))
+
+SCALER_1 = -1
+SCALER_2 = 20
+
 arm_selected = 0
-u_features = np.zeros((d, 1))
+z_t = np.zeros((DIM, 1))
 
 
 def set_articles(articles):
@@ -24,41 +25,38 @@ def set_articles(articles):
 
 
 def update(reward):
-    if reward == -1:
-        return
-    else:
-        # reward scaling
+    if reward != -1:
         if reward == 0:
-            reward = R0
+            reward = SCALER_1
         else:
-            reward = R1
-        # update
-        A[arm_selected] += u_features.dot(u_features.T)
-        b[arm_selected] += reward*u_features
-        A_inverse[arm_selected] = np.linalg.inv(A[arm_selected])
-        THETA[arm_selected] = (A_inverse[arm_selected].dot(b[arm_selected])).T
+            reward = SCALER_2
+        M[arm_selected] += z_t.dot(z_t.transpose())
+        M_inverse[arm_selected] = np.linalg.inv(M[arm_selected])
+        b[arm_selected] += reward * z_t
+        THETA[arm_selected] = (
+            M_inverse[arm_selected].dot(b[arm_selected])).transpose()
+    else:
+        return
 
 
 def recommend(time, user_features, choices):
-    global arm_selected, u_features
-    u_features = np.array(user_features).reshape(d, 1)
+    global arm_selected, z_t
+    z_t = np.array(user_features).reshape(DIM, 1)
+    flag = 1
 
-    first = 1
-    for arm in choices:
-        # create arrays for new article 
-        if arm not in A:
-            A[arm] = np.identity(d)
-            b[arm] = np.zeros((d, 1))
-            A_inverse[arm] = np.linalg.inv(A[arm])
-            THETA[arm] = (A_inverse[arm].dot(b[arm])).T
+    for a in choices:
+        if a not in M:
+            M[a] = np.identity(DIM)
+            b[a] = np.zeros((DIM, 1))
+            M_inverse[a] = np.linalg.inv(M[a])
+            THETA[a] = (M_inverse[a].dot(b[a])).transpose()
 
-        # UCB calculation
-        p = THETA[arm].dot(u_features) + ALPHA*np.sqrt(u_features.T.dot(A_inverse[arm]).dot(u_features))
+        p_t = THETA[a].dot(z_t) + ALPHA * \
+            np.sqrt(z_t.transpose().dot(M_inverse[a]).dot(z_t))
 
-        # select content with highest UCB
-        if first == 1 or p > max_p:
-            first = 0
-            max_p = p
-            arm_selected = arm
+        if flag == 1 or max_p < p_t:
+            max_p = p_t
+            flag = 0
+            arm_selected = a
 
     return arm_selected
